@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <title>Document</title>
+    <style>
+        .chessboard {
+            display: grid;
+            grid-template-columns: repeat(8, minmax(0, 1fr));
+            grid-template-rows: repeat(8, minmax(0, 1fr));
+            width: 400px;
+            height: 400px;
+            transform: rotate(0deg);
+        }
+
+        .piece.white {
+            color: white;
+            filter: drop-shadow(0 0 2px rgba(0, 0, 0, 1));
+        }
+
+        .piece.black {
+            color: black;
+        }
+
+        .flipped {
+            transform: rotate(180deg);
+        }
+
+        .square {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .square.light {
+            background-color: #f0d9b5;
+        }
+
+        .square.dark {
+            background-color: #b58863;
+        }
+
+        .piece {
+            font-size: 36px;
+            cursor: pointer;
+        }
+
+        .piece.draggable {
+            cursor: grab;
+        }
+
+        .dragging {
+            opacity: 0.5;
+        }
+
+        .flipped .piece {
+            transform: rotate(180deg);
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="w-full h-screen flex items-center justify-center bg-zinc-900">
+
+        <div id="initialScreen" class="flex flex-col items-center justify-center space-y-4">
+            <h1 style="color: white; font-size: 3em; padding-bottom: 3em;"> Welcome to Chess Game</h1>
+            <input type="text" id="playerName" class="p-2 border border-gray-300 rounded" placeholder="Enter your name">
+            <button id="startButton" class="p-2 bg-blue-500 text-white rounded">Start Game</button>
+        </div>
+
+
+        <div id="chessScreen" class="hidden flex flex-col items-center">
+
+            <div id="playerDisplayName" class="mb-4 text-white text-xl"></div>
+
+            <div id="timer" class="mb-4 text-white text-xl">Time: 0s</div>
+
+            <div class="chessboard w-96 h-96 bg-red-400">
+
+            </div>
+
+            <div class="mt-4 flex space-x-4">
+                <button id="pauseButton" class="p-2 bg-yellow-500 text-white rounded">Pause Game</button>
+                <button id="endButton" class="p-2 bg-red-500 text-white rounded">End Game</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"
+        integrity="sha384-2huaZvOR9iDzHqslqwpR87isEmrfxqyWOF7hr7BY6KG0+hVKLoEXMPUJw3ynWuhO"
+        crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"
+        integrity="sha512-xRllwz2gdZciIB+AkEbeq+gVhX8VB8XsfqeFbUh+SzHlN96dEduwtTuVuc2u9EROlmW9+yhRlxjif66ORpsgVA=="
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="/js/chessgame.js"></script>
+
+    <script>
+        let timerInterval;
+        let seconds = 0;
+        let isPaused = false;
+
+        document.getElementById('startButton').addEventListener('click', function () {
+            const playerName = document.getElementById('playerName').value;
+            if (playerName) {
+
+                localStorage.setItem('playerName', playerName);
+
+
+                document.getElementById('initialScreen').classList.add('hidden');
+                document.getElementById('chessScreen').classList.remove('hidden');
+
+
+                document.getElementById('playerDisplayName').innerText = `Player: ${playerName}`;
+
+                startTimer();
+            } else {
+                alert('Please enter your name');
+            }
+        });
+
+        document.getElementById('pauseButton').addEventListener('click', function () {
+            if (isPaused) {
+
+                startTimer();
+                this.innerText = 'Pause Game';
+            } else {
+                clearInterval(timerInterval);
+                this.innerText = 'Resume Game';
+            }
+            isPaused = !isPaused;
+        });
+
+        document.getElementById('endButton').addEventListener('click', function () {
+
+            clearInterval(timerInterval);
+            seconds = 0;
+            document.getElementById('timer').innerText = 'Time: 0s';
+            document.getElementById('chessScreen').classList.add('hidden');
+            document.getElementById('initialScreen').classList.remove('hidden');
+        });
+
+        function startTimer() {
+            timerInterval = setInterval(function () {
+                seconds++;
+                document.getElementById('timer').innerText = `Time: ${seconds}s`;
+            }, 1000);
+        }
+    </script>
+</body>
+
+</html>
