@@ -1,4 +1,5 @@
-const socket = io('http://localhost:5000');
+const socket = io(window.location.origin);
+
 const chess = new Chess();
 const boardElement = document.querySelector('.chessboard');
 let draggedPiece = null;
