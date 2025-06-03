@@ -3,64 +3,77 @@ const http = require('http');
 const socketIO = require('socket.io');
 const { Chess } = require('chess.js');
 const path = require('path');
+require('dotenv').config(); // For .env file if needed
 
 const app = express();
 const server = http.createServer(app);
 const io = socketIO(server);
 
 const chess = new Chess();
-let player = {};
-let curplay = 'w';
+let players = {};
+let currentTurn = 'w';
 
-app.set("view engine", "ejs");
-app.use(express.static(path.join(__dirname, "public")));
+// Set view engine
+app.set('view engine', 'ejs');
 
-app.get("/", (req, res) => {
-    res.render("index", { title: 'chess game' });
+// Serve static files from /public
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Route: homepage
+app.get('/', (req, res) => {
+    res.render('index', { title: 'Chess Game' });
 });
 
-io.on('connection', function (uniquesoket) {
-    console.log('connected');
+// Socket.IO Connection
+io.on('connection', (socket) => {
+    console.log('A user connected:', socket.id);
 
-    if (!player.white) {
-        player.white = uniquesoket.id;
-        uniquesoket.emit('playerRole', 'w');
-    } else if (!player.black) {
-        player.black = uniquesoket.id;
-        uniquesoket.emit('playerRole', 'b');
+    // Assign player roles
+    if (!players.white) {
+        players.white = socket.id;
+        socket.emit('playerRole', 'w');
+    } else if (!players.black) {
+        players.black = socket.id;
+        socket.emit('playerRole', 'b');
     } else {
-        uniquesoket.emit('spectatorRole');
+        socket.emit('spectatorRole');
     }
 
-    uniquesoket.on('disconnect', function () {
-        if (uniquesoket.id === player.white) {
-            delete player.white;
-        } else if (uniquesoket.id === player.black) {
-            delete player.black;
-        }
+    // Handle disconnection
+    socket.on('disconnect', () => {
+        console.log('User disconnected:', socket.id);
+        if (socket.id === players.white) delete players.white;
+        if (socket.id === players.black) delete players.black;
     });
 
-    uniquesoket.on('move', (move) => {
+    // Handle chess moves
+    socket.on('move', (move) => {
         try {
-            if (chess.turn() === 'w' && uniquesoket.id !== player.white) return;
-            if (chess.turn() === 'b' && uniquesoket.id !== player.black) return;
+            const isWhiteTurn = chess.turn() === 'w';
+            const isValidPlayer =
+                (isWhiteTurn && socket.id === players.white) ||
+                (!isWhiteTurn && socket.id === players.black);
+
+            if (!isValidPlayer) return;
 
             const result = chess.move(move);
             if (result) {
-                curplay = chess.turn();
-                io.emit('move', move);
-                io.emit('boardState', chess.fen());
+                currentTurn = chess.turn();
+                io.emit('move', move); // Broadcast move
+                io.emit('boardState', chess.fen()); // Send updated board
             } else {
-                console.log('invalid move:', move);
-                uniquesoket.emit('invalidMove', move);
+                socket.emit('invalidMove', move);
             }
-        } catch (error) {
-            console.log('err');
-            uniquesoket.emit('Invalid move', move);
+        } catch (err) {
+            console.error('Error processing move:', err);
+            socket.emit('invalidMove', move);
         }
     });
 });
 
-server.listen(5000, function () {
-    console.log('listening on port 5000');
+// Use environment port (Render will set it automatically)
+const PORT = process.env.PORT || 5000;
+
+server.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
 });
